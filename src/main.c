@@ -29,7 +29,7 @@ int main()
 
     printf("%s\n", code);
 
-    FILE * fp = fopen("build/examples/box.c", "w");
+    FILE * fp = fopen("build/main.box.c", "w");
     fprintf(fp, "%s", code);
     fclose(fp);
 

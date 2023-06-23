@@ -1,25 +1,9 @@
 #include "box.h"
 #include "nec.h"
+#include "str.h"
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-
-#define str_push(__str_a, __str_c) (__str_a[nec_size(__str_a) - 1] = __str_c, nec_push(__str_a, 0))
-#define str_pop(__str_a) (nec_size(__str_a) > 1 ? (nec_pop(__str_a), __str_a[nec_size(__str_a) - 1] = 0) : 0)
-
-char* str_cpy(const char* src)
-{
-    char* string = 0;
-    nec_push(string, 0);
-    if(!src) return string;
-    while(*src != 0) str_push(string, *src++);
-    return string;
-}
-
-void str_append(char** out, const char* src)
-{
-    while(*src) str_push((*out), *src++);
-}
 
 void box_error(const char* text)
 {
@@ -27,15 +11,6 @@ void box_error(const char* text)
     printf("%s\n", text);
     printf("\033[0m");
 }
-
-// char* left_trim(const char* text)
-// {
-//     while(*text && isspace(*text)) text++;
-//     char* trimmed = 0;
-//     while(*text) nec_push(trimmed, *text);
-//     nec_push(trimmed, 0);
-//     return 0;
-// }
 
 char* box_load(const char* path)
 {
@@ -175,9 +150,9 @@ char* box_generate_c(const box_op* ops)
         for(int j = 0; j < nec_size(ops[i].shards); j++)
         {
             str_append(&raw, ops[i].shards[j]);
-            str_push(raw, ' ');
+            str_append(&raw, " ");
         }
-        str_push(raw, ';');
+        str_append(&raw, ";");
     }
 
     str_append(&raw, "return 0;}");

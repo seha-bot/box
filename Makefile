@@ -1,37 +1,24 @@
-FLAGS := -Iinc -Ibuild/deps
 LIBS := -lm
+DEPS := \
+https://raw.githubusercontent.com/seha-bot/packages/main/nec/nec.c \
+https://raw.githubusercontent.com/seha-bot/packages/main/nec/nec.h \
+https://raw.githubusercontent.com/seha-bot/packages/str/str/str.c \
+https://raw.githubusercontent.com/seha-bot/packages/str/str/str.h
 
 all: build build/main
 
-dep := $(addprefix build/,$(shell cat deps.list))
-$(dep): deps.list
-	@mkdir -p build/deps && cd build/deps && \
-	GET=$(patsubst build/%,https://%,$@) && \
-	echo Downloading $$GET && \
-	curl -O $$GET
-	@mkdir -p $$(dirname $@) && touch $@
+build:
+	@echo -Iinc > compile_flags.txt && echo -Ibuild/deps >> compile_flags.txt
+	@mkdir -p build/deps && cd build/deps && curl -s $(addprefix -O ,$(DEPS))
+	make $(patsubst %.c,build/deps/%.o,$(filter %.c,$(notdir $(DEPS))))
 
-build: | $(dep)
-	@echo $(FLAGS) | tr " " "\n" > compile_flags.txt
-	@mkdir -p build
-	@echo -e "src := \$$(wildcard deps/*.c)\n\
-	obj := \$$(src:deps/%.c=%.o)\n\
-	all: \$$(obj)\n\
-	%.o: deps/%.c\n\t\
-	@gcc -c -Ideps \$$^ -o \$$@" > build/Makefile
-	@cd build/ && make
-
-DEPS := $(wildcard build/*.d)
--include $(DEPS)
-
+build/deps/%.o: build/deps/%.c
+	@gcc -c -Iinc -Ibuild/deps $^ -o build/$(notdir $@)
 build/%.o: src/%.c
-	@gcc -g -c -MD $(FLAGS) $< -o $@
+	@gcc -c -Iinc -Ibuild/deps $^ -o build/$(notdir $@)
 
-src := $(wildcard src/*.c)
-obj := $(src:src/%.c=build/%.o)
-
-build/main: $(obj)
-	@gcc -g build/*.o -Llib $(LIBS) -o $@
+build/main: $(patsubst src/%.c,build/%.o,$(wildcard src/*.c))
+	@gcc build/*.o $(LIBS) -o $@
 
 clean:
 	rm -rf build compile_flags.txt
