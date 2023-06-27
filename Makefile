@@ -2,6 +2,8 @@ LIBS := -lm
 DEPS := \
 https://raw.githubusercontent.com/seha-bot/packages/main/nec/nec.c \
 https://raw.githubusercontent.com/seha-bot/packages/main/nec/nec.h \
+https://raw.githubusercontent.com/seha-bot/packages/main/nec/nic.c \
+https://raw.githubusercontent.com/seha-bot/packages/main/nec/nic.h \
 https://raw.githubusercontent.com/seha-bot/packages/str/str/str.c \
 https://raw.githubusercontent.com/seha-bot/packages/str/str/str.h
 
@@ -13,12 +15,12 @@ build:
 	make $(patsubst %.c,build/deps/%.o,$(filter %.c,$(notdir $(DEPS))))
 
 build/deps/%.o: build/deps/%.c
-	@gcc -c -Iinc -Ibuild/deps $^ -o build/$(notdir $@)
+	@gcc -c -g -Iinc -Ibuild/deps $^ -o build/$(notdir $@)
 build/%.o: src/%.c
-	@gcc -c -Iinc -Ibuild/deps $^ -o build/$(notdir $@)
+	@gcc -c -g -Iinc -Ibuild/deps $^ -o build/$(notdir $@)
 
 build/main: $(patsubst src/%.c,build/%.o,$(wildcard src/*.c))
-	@gcc build/*.o $(LIBS) -o $@
+	@gcc -g build/*.o $(LIBS) -o $@
 
 clean:
 	rm -rf build compile_flags.txt

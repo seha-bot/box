@@ -1,9 +1,10 @@
 #include "box.h"
 #include "nec.h"
-#include "str.h"
+#include "nic.h"
 #include <stdio.h>
-#include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 void box_error(const char* text)
 {
@@ -50,6 +51,7 @@ char* next_shard(const char** raw)
     if(**raw == '(' || **raw == ')' || **raw == '{' || **raw == '}' || **raw == ';')
     {
         nec_push(shard, *(*raw)++);
+        nec_push(shard, 0);
         return shard;
     }
 
@@ -74,27 +76,39 @@ char** box_shardify(const char* raw)
     return shards;
 }
 
-void assignType(box_op* op)
+int assign_type(box_op* op)
 {
-    if(strcmp(op->shards[0], "echo") == 0)
+    if(!op->shards)
     {
-        op->type = BOX_ECHO;
+        box_error("Syntax error: empty statement.");
+        return 1;
+    }
+
+    if(nec_size(op->shards) == 1)
+    {
+        op->type = BOX_CHECKPOINT;
+    }
+    else if(strcmp(op->shards[0], "if") == 0)
+    {
+        op->type = BOX_CONDITION;
+    }
+    else if(strcmp(op->shards[0], "goto") == 0)
+    {
+        op->type = BOX_JUMP;
+    }
+    else if(strcmp(op->shards[0], "print") == 0)
+    {
+        op->type = BOX_PRINT;
     }
     else if(op->shards[1][0] == '=')
     {
         op->type = BOX_ASSIGNMENT;
     }
-    else if(strcmp(op->shards[0], "if") == 0)
-    {
-        op->type = BOX_IF;
-    }
-    else if(op->shards[2][0] == '=')
-    {
-        op->type = BOX_CREATION;
-    }
+
+    return 0;
 }
 
-box_op* box_split(char** shards)
+box_op* box_parse(const char** shards)
 {
     box_op* ops = 0;
 
@@ -103,7 +117,12 @@ box_op* box_split(char** shards)
     {
         if(shards[i][0] == ';')
         {
-            assignType(&op);
+            if(assign_type(&op))
+            {
+                nec_free(op.shards);
+                nec_free(ops);
+                return 0;
+            }
             nec_push(ops, op);
             op.shards = 0;
             continue;
@@ -114,48 +133,57 @@ box_op* box_split(char** shards)
     return ops;
 }
 
-char* convert_type(const char* type)
+nic_define(int, int);
+
+nic_int positions = { 0, 0, 0 };
+nic_int values = { 0, 0, 0 };
+int pc = 0;
+
+int* box_execute(box_op op)
 {
-    if(strcmp(type, "Int") == 0) return "int32_t";
-    if(strcmp(type, "Uint") == 0) return "uint32_t";
-    box_error("Unknown type");
-    return 0;
+    switch(op.type)
+    {
+    case BOX_ASSIGNMENT:
+        nic_map_int(&values, op.shards[0], atoi(op.shards[2]));
+        break;
+    case BOX_CHECKPOINT:
+        if(!nic_map_int(&positions, op.shards[0], pc))
+        {
+            box_error("Syntax error: cannot redefine checkpoints.");
+            return 0;
+        }
+        break;
+    case BOX_CONDITION: break;
+    case BOX_JUMP:;
+        int* position = nic_map_find_int(&positions, op.shards[2]);
+        if(!position)
+        {
+            box_error("Runtime error: referencing undeclared checkpoint.");
+            return 0;
+        }
+        pc = *position;
+        break;
+    case BOX_PRINT:;
+        int* value = nic_map_find_int(&values, op.shards[2]);
+        if(!value)
+        {
+            box_error("Runtime error: referencing undeclared value.");
+            return 0;
+        }
+        printf("%d\n", *value);
+        break;
+    }
+    pc++;
+    return &pc;
 }
 
-void box_convert_c(box_op* ops)
+void box_free(box_op* ops)
 {
+    if(!ops) return;
     for(int i = 0; i < nec_size(ops); i++)
     {
-        if(ops[i].type == BOX_CREATION)
-        {
-            ops[i].shards[0] = convert_type(ops[i].shards[0]);
-        }
-        if(ops[i].type == BOX_ECHO)
-        {
-            char* shard = str_cpy("printf(\"%d\",");
-            str_append(&shard, ops[i].shards[1]);
-            str_append(&shard, ")");
-            ops[i].shards = 0;
-            nec_push(ops[i].shards, shard);
-        }
+        nec_free(ops[i].shards);
     }
-}
-
-char* box_generate_c(const box_op* ops)
-{
-    char* raw = str_cpy("#include <stdint.h>\nint main(){");
-
-    for(int i = 0; i < nec_size(ops); i++)
-    {
-        for(int j = 0; j < nec_size(ops[i].shards); j++)
-        {
-            str_append(&raw, ops[i].shards[j]);
-            str_append(&raw, " ");
-        }
-        str_append(&raw, ";");
-    }
-
-    str_append(&raw, "return 0;}");
-    return raw;
+    nec_free(ops);
 }
 

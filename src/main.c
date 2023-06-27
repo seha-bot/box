@@ -3,14 +3,28 @@
 #include <stdio.h>
 #include <unistd.h>
 
+void temp_free_shards(char** shards)
+{
+    for(int i = 0; i < nec_size(shards); i++)
+    {
+        nec_free(shards[i]);
+    }
+    nec_free(shards);
+}
+
 int main()
 {
     char* raw = box_load("examples/main.box");
     if(!raw) return 1;
 
     char** shards = box_shardify(raw);
-    
-    box_op* ops = box_split(shards);
+
+    box_op* ops = box_parse((const char**)shards);
+    if(!ops)
+    {
+        temp_free_shards(shards);
+        return 1;
+    }
 
     for(int i = 0; i < nec_size(ops); i++)
     {
@@ -24,14 +38,17 @@ int main()
         printf("\n");
     }
 
-    box_convert_c(ops);
-    char* code = box_generate_c(ops);
-
-    printf("%s\n", code);
-
-    FILE * fp = fopen("build/main.box.c", "w");
-    fprintf(fp, "%s", code);
-    fclose(fp);
+    int i = 0;
+    while(i < nec_size(ops))
+    {
+        int* pc = box_execute(ops[i]);
+        if(!pc)
+        {
+            box_free(ops);
+            return 1;
+        }
+        i = *pc;
+    }
 
     return 0;
 }

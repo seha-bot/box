@@ -1,3 +1,5 @@
-Int a = 3;
+a = 3;
+b;
 a = 5;
-echo a;
+print(a);
+goto(b);
