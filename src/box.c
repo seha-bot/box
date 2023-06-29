@@ -1,6 +1,7 @@
 #include "box.h"
 #include "nec.h"
 #include "nic.h"
+#include "str.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -133,7 +134,7 @@ box_op* box_parse(const char** shards)
     return ops;
 }
 
-nic_define(int, int);
+nic_define(int, int)
 
 nic_int positions = { 0, 0, 0 };
 nic_int values = { 0, 0, 0 };
@@ -144,7 +145,19 @@ int* box_execute(box_op op)
     switch(op.type)
     {
     case BOX_ASSIGNMENT:
-        nic_map_int(&values, op.shards[0], atoi(op.shards[2]));
+        char* expr = str_cpy(0);
+        for(int i = 2; i < nec_size(op.shards); i++)
+        {
+            int* value = nic_map_find_int(&values, op.shards[i]);
+            if(value)
+            {
+                char str[30];
+                sprintf(str, "%d", *value);
+                str_append(&expr, str);
+            }
+            else str_append(&expr, op.shards[i]);
+        }
+        nic_map_int(&values, op.shards[0], eval(expr));
         break;
     case BOX_CHECKPOINT:
         if(!nic_map_int(&positions, op.shards[0], pc))

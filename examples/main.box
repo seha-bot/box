@@ -1,5 +1,11 @@
-a = 3;
-b;
-a = 5;
+a = 1;
+b = 1;
+
+again;
+
+a = a + b;
+b = a - b;
 print(a);
-goto(b);
+
+goto(again);
+

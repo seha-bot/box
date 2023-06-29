@@ -4,8 +4,8 @@ https://raw.githubusercontent.com/seha-bot/packages/main/nec/nec.c \
 https://raw.githubusercontent.com/seha-bot/packages/main/nec/nec.h \
 https://raw.githubusercontent.com/seha-bot/packages/main/nec/nic.c \
 https://raw.githubusercontent.com/seha-bot/packages/main/nec/nic.h \
-https://raw.githubusercontent.com/seha-bot/packages/str/str/str.c \
-https://raw.githubusercontent.com/seha-bot/packages/str/str/str.h
+https://raw.githubusercontent.com/seha-bot/packages/main/str/str.c \
+https://raw.githubusercontent.com/seha-bot/packages/main/str/str.h
 
 all: build build/main
 
